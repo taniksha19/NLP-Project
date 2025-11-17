@@ -1,22 +1,17 @@
 # Multilingual Text Detoxification - Baseline System
 
-This project implements a baseline system for multilingual text detoxification using a pre-trained mT5 model.
+This project implements a baseline system for multilingual text detoxification for the PAN 2024 text detoxification task. The baseline removes toxic stopwords from input text using a multilingual toxic lexicon.
 
 ## Project Structure
 
 ```
-multilingual-detox/
-├── data/                # downloaded datasets will go here
-├── results/
-│   └── baseline_results.csv
+NLP-Project/
+├── data/                # Input datasets (JSONL format)
+│   └── input.jsonl
+├── results/             # Output results
+│   └── output.jsonl
 ├── src/
-│   ├── __init__.py
-│   ├── config.py
-│   ├── dataset_loader.py
-│   ├── baseline_model.py
-│   ├── evaluation.py
-│   ├── utils.py
-│   └── run_baseline.py
+│   └── baseline_model.py  # Baseline detoxification script
 ├── requirements.txt
 └── README.md
 ```
@@ -31,42 +26,70 @@ pip install -r requirements.txt
 
 ## Usage
 
-Run the baseline evaluation:
+Run the baseline detoxification script on a JSONL input file:
 
 ```bash
-python src/run_baseline.py
+python src/baseline_model.py --input data/input.jsonl --output results/output.jsonl --language en
 ```
 
-This will:
-1. Load datasets for English, Russian, Spanish, and Ukrainian
-2. Run detoxification on the first 300 samples per language
-3. Compute evaluation metrics (Style Transfer Accuracy, Semantic Similarity, Fluency)
-4. Save results to `results/baseline_results.csv`
+### Command Line Arguments
 
-## Evaluation Metrics
+- `--input` (required): Input JSONL file path. Each line should be a JSON object with at least a `"text"` field.
+- `--output` (required): Output JSONL file path where detoxified results will be written.
+- `--language` (optional): Language code for stopwords. Options: `am`, `es`, `ru`, `uk`, `en`, `zh`, `ar`, `hi`, `de`. If not specified, all stopwords from all languages will be loaded.
+- `--remove-all-terms` (optional, default: `False`): If `True`, generates empty strings for all texts.
+- `--remove-no-terms` (optional, default: `False`): If `True`, outputs text without any modification.
+- `--log-level` (optional, default: `INFO`): Logging level. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
 
-- **Style Transfer Accuracy (STA)**: Percentage of generated sentences that do not contain toxic words
-- **Semantic Similarity (SIM)**: Cosine similarity between gold and generated detoxified texts using LaBSE embeddings
-- **Fluency (FL)**: Heuristic score based on sentence length and token repetition
+### Example
 
-## Datasets
+```bash
+# Process English text with English stopwords
+python src/baseline_model.py --input data/input.jsonl --output results/output.jsonl --language en
 
-The system uses the following HuggingFace datasets:
-- English: `s-nlp/paradetox`
-- Russian: `s-nlp/ru_paradetox`
-- Spanish: `textdetox/es_paradetox`
-- Ukrainian: `textdetox/uk_paradetox`
+# Process without specifying language (uses all stopwords)
+python src/baseline_model.py --input data/input.jsonl --output results/output.jsonl
+```
+
+## Input Format
+
+The input file should be in JSONL format, where each line is a JSON object:
+
+```json
+{"id": "en-sample00", "text": "this is some toxic text."}
+{"id": "en-sample01", "text": "another example sentence."}
+```
+
+## Output Format
+
+The output file will be in the same JSONL format, with the `"text"` field containing the detoxified version:
+
+```json
+{"id": "en-sample00", "text": "this is some text."}
+{"id": "en-sample01", "text": "another example sentence."}
+```
 
 ## Model
 
-The baseline uses the pre-trained model: `textdetox/mt5-xl-detox-baseline`
+The baseline uses a simple stopword removal approach:
+- Loads toxic stopwords from the `textdetox/multilingual_toxic_lexicon` dataset
+- Removes tokens that match stopwords (case-insensitive)
+- Preserves the original text structure and non-toxic words
+
+## Limitations
+
+- The baseline only removes exact word matches from the lexicon
+- Punctuation attached to words (e.g., "fuck.") may not be detected
+- Misspelled toxic words will not be removed
+- This is a trivial baseline intended for comparison purposes
 
 ## TODO
 
-- Replace heuristic metrics with PAN evaluation scripts
-- Add mT5 fine-tuning pipeline
-- Add mBART training experiments
-- Add multilingual data augmentation methods
+- Improve tokenization to handle punctuation better
+- Add support for fuzzy matching or stemming
+- Integrate with PAN evaluation scripts
+- Add more sophisticated detoxification methods
+
 
 
 
