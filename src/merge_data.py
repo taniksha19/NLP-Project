@@ -4,32 +4,40 @@ from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from tqdm import tqdm
 import gc
+import os
 
 # ==========================================
 # CONFIGURATION
 # ==========================================
 MODEL_NAME = "s-nlp/mt0-xl-detox-orpo"
 BATCH_SIZE = 8 
-OUTPUT_FILE = "final_detox_dataset.csv"
+OUTPUT_DIR = "../results"
+
+# Ensure output directory exists
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# All available languages across both datasets
+ALL_LANGUAGES = ['en', 'ru', 'uk', 'de', 'es', 'am', 'zh', 'ar', 'hi', 'it', 'fr', 'he', 'hin', 'tt', 'ja']
 
 # Language codes available in the paradetox dataset
 PARADETOX_LANGS = ['en', 'ru', 'uk', 'de', 'es', 'am', 'zh', 'ar', 'hi']
 
 # ==========================================
-# PART 1: LOAD & MERGE DATASETS
+# PART 1: LOAD & MERGE DATASETS FOR ONE LANGUAGE
 # ==========================================
-def prepare_datasets():
-    print("\n--- PART 1: Loading Datasets ---")
+def prepare_dataset_for_language(lang):
+    print(f"\n{'='*60}")
+    print(f"Processing Language: {lang.upper()}")
+    print(f"{'='*60}")
+    
+    all_dfs = []
     
     # -------------------------------------------------------
-    # 1. Load Paradetox (FIX: Load each language split)
+    # 1. Load Paradetox for this language (if available)
     # -------------------------------------------------------
-    print("Loading textdetox/multilingual_paradetox...")
-    all_para_dfs = []
-    
-    for lang in PARADETOX_LANGS:
+    if lang in PARADETOX_LANGS:
         try:
-            print(f"   - Loading language: {lang}")
+            print(f"Loading paradetox data for {lang}...")
             ds_lang = load_dataset("textdetox/multilingual_paradetox", split=lang)
             df_lang = ds_lang.to_pandas()
             
@@ -43,7 +51,6 @@ def prepare_datasets():
             if "neutral_sentence" in df_lang.columns:
                 rename_map["neutral_sentence"] = "non_toxic_sentence"
             elif "non_toxic_sentence" not in df_lang.columns and "neutral_sentence" not in df_lang.columns:
-                # Check for alternative names
                 for col in df_lang.columns:
                     if 'neutral' in col.lower() or 'detox' in col.lower():
                         rename_map[col] = "non_toxic_sentence"
@@ -55,131 +62,93 @@ def prepare_datasets():
             # Ensure we have the required columns
             if 'toxic_sentence' in df_lang.columns and 'non_toxic_sentence' in df_lang.columns:
                 df_lang = df_lang[['toxic_sentence', 'non_toxic_sentence', 'lang']]
-                all_para_dfs.append(df_lang)
-                print(f"      ✓ Loaded {len(df_lang)} rows")
+                all_dfs.append(df_lang)
+                print(f"  ✓ Loaded {len(df_lang)} paradetox rows")
             else:
-                print(f"      ⚠ Skipping {lang}: missing required columns")
+                print(f"  ⚠ Skipping paradetox: missing required columns")
                 
         except Exception as e:
-            print(f"      ⚠ Could not load {lang}: {e}")
+            print(f"  ⚠ Could not load paradetox: {e}")
+    else:
+        print(f"  ℹ No paradetox data available for {lang}")
     
-    if not all_para_dfs:
-        print("CRITICAL ERROR: No paradetox data loaded!")
-        return None
-    
-    # Combine all language dataframes
-    df_para = pd.concat(all_para_dfs, ignore_index=True)
-    print(f"\n✓ Total Paradetox rows loaded: {len(df_para)}")
-
     # -------------------------------------------------------
-    # 2. Load Toxicity Dataset (Input Only) - Language by Language
+    # 2. Load Toxicity Dataset for this language
     # -------------------------------------------------------
-    print("\nLoading additional toxicity dataset (textdetox/multilingual_toxicity_dataset)...")
-    all_tox_dfs = []
-    
-    # Available languages in the toxicity dataset (more than paradetox)
-    TOXICITY_LANGS = ['en', 'ru', 'uk', 'de', 'es', 'am', 'zh', 'ar', 'hi', 'it', 'fr', 'he', 'hin', 'tt', 'ja']
-    
-    for lang in TOXICITY_LANGS:
-        try:
-            print(f"   - Loading toxicity data for: {lang}")
-            ds_tox_lang = load_dataset("textdetox/multilingual_toxicity_dataset", split=lang)
-            df_tox_lang = ds_tox_lang.to_pandas()
-            
-            # Add language column
-            df_tox_lang['lang'] = lang
-            
-            # Filter for toxic rows (is_toxic == 1)
-            if 'is_toxic' in df_tox_lang.columns:
-                df_tox_lang = df_tox_lang[df_tox_lang['is_toxic'] == 1].copy()
-            elif 'toxic' in df_tox_lang.columns:
-                df_tox_lang = df_tox_lang[df_tox_lang['toxic'] == 1].copy()
-            
-            # Normalize Text Column
-            text_col_found = False
-            for col in ['text', 'comment_text', 'sentence', 'content', 'toxic_comment']:
-                if col in df_tox_lang.columns:
-                    df_tox_lang = df_tox_lang.rename(columns={col: "toxic_sentence"})
-                    text_col_found = True
-                    break
-            
-            if not text_col_found:
-                print(f"      ⚠ No text column found in {lang}, skipping")
-                continue
-            
+    try:
+        print(f"Loading toxicity data for {lang}...")
+        ds_tox_lang = load_dataset("textdetox/multilingual_toxicity_dataset", split=lang)
+        df_tox_lang = ds_tox_lang.to_pandas()
+        
+        # Add language column
+        df_tox_lang['lang'] = lang
+        
+        # Filter for toxic rows (is_toxic == 1)
+        if 'is_toxic' in df_tox_lang.columns:
+            df_tox_lang = df_tox_lang[df_tox_lang['is_toxic'] == 1].copy()
+        elif 'toxic' in df_tox_lang.columns:
+            df_tox_lang = df_tox_lang[df_tox_lang['toxic'] == 1].copy()
+        
+        # Normalize Text Column
+        text_col_found = False
+        for col in ['text', 'comment_text', 'sentence', 'content', 'toxic_comment']:
+            if col in df_tox_lang.columns:
+                df_tox_lang = df_tox_lang.rename(columns={col: "toxic_sentence"})
+                text_col_found = True
+                break
+        
+        if not text_col_found:
+            print(f"  ⚠ No text column found in toxicity data")
+        else:
             # Prepare Target Column (Empty - will be generated by model)
             df_tox_lang['non_toxic_sentence'] = None
             
             # Keep only needed columns
             df_tox_lang = df_tox_lang[['toxic_sentence', 'non_toxic_sentence', 'lang']]
-            all_tox_dfs.append(df_tox_lang)
-            print(f"      ✓ Loaded {len(df_tox_lang)} toxic rows")
-            
-        except Exception as e:
-            print(f"      ⚠ Could not load {lang}: {e}")
+            all_dfs.append(df_tox_lang)
+            print(f"  ✓ Loaded {len(df_tox_lang)} toxicity rows")
+        
+    except Exception as e:
+        print(f"  ⚠ Could not load toxicity data: {e}")
     
-    # Combine all toxicity data
-    if all_tox_dfs:
-        df_tox_filtered = pd.concat(all_tox_dfs, ignore_index=True)
-        print(f"\n✓ Total toxicity rows loaded: {len(df_tox_filtered)}")
-    else:
-        df_tox_filtered = pd.DataFrame()
-        print(f"\n⚠ No toxicity data loaded")
-
     # -------------------------------------------------------
-    # 3. Merge
+    # 3. Merge data for this language
     # -------------------------------------------------------
-    print("\nMerging datasets...")
-    if not df_tox_filtered.empty:
-        merged_df = pd.concat([df_para, df_tox_filtered], ignore_index=True)
-    else:
-        merged_df = df_para
+    if not all_dfs:
+        print(f"  ❌ No data loaded for {lang}")
+        return None
+    
+    merged_df = pd.concat(all_dfs, ignore_index=True)
     
     # Deduplicate based on the input sentence
-    print(f"Rows before deduplication: {len(merged_df)}")
+    print(f"  Rows before deduplication: {len(merged_df)}")
     merged_df = merged_df.drop_duplicates(subset=['toxic_sentence'])
     
-    print(f"✓ Total merged rows after dedup: {len(merged_df)}")
-    print(f"✓ Languages present: {merged_df['lang'].unique()}")
+    print(f"  ✓ Total rows after dedup: {len(merged_df)}")
     return merged_df
 
 # ==========================================
 # PART 2: GENERATE MISSING LABELS (GPU)
 # ==========================================
-def generate_labels(df):
-    print("\n--- PART 2: Generating Missing Labels ---")
+def generate_labels(df, lang, tokenizer, model):
+    print(f"\n--- Generating Missing Labels for {lang.upper()} ---")
     
     # Identify rows that are missing the non-toxic version
     mask = df['non_toxic_sentence'].isna() | (df['non_toxic_sentence'] == "")
     
     if mask.sum() == 0:
-        print("✓ No missing labels found. Dataset is complete!")
+        print("  ✓ No missing labels found. Dataset is complete!")
         return df
 
-    print(f"Rows needing generation: {mask.sum()}")
-    print("Loading Model (8-bit quantization for memory efficiency)...")
-
-    try:
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-        # 8-bit loading is essential for Colab T4 GPUs
-        model = AutoModelForSeq2SeqLM.from_pretrained(
-            MODEL_NAME,
-            device_map="auto",
-            load_in_8bit=True
-        )
-        print("✓ Model loaded successfully")
-    except Exception as e:
-        print(f"❌ Model load failed. Error: {e}")
-        print("Hint: Ensure 'bitsandbytes' and 'accelerate' are installed.")
-        print("Try: !pip install bitsandbytes accelerate")
-        return df
+    print(f"  Rows needing generation: {mask.sum()}")
 
     # Prompt Map (language-specific prefixes)
     lang_prompts = {
         'en': 'Detoxify: ', 'ru': 'Детоксифицируй: ', 'uk': 'Детоксифікуй: ',
         'de': 'Detoxifizieren: ', 'es': 'Desintoxicar: ', 'fr': 'Détoxifier: ',
         'ar': 'إزالة السموم: ', 'hi': 'विषाक्तता हटाएँ: ', 'zh': '排毒： ',
-        'am': 'Detoxify: ',  # Amharic - using English prefix
+        'am': 'Detoxify: ', 'it': 'Disintossicare: ', 'he': 'לנקות רעלים: ',
+        'hin': 'विषाक्तता हटाएँ: ', 'tt': 'Detoksifikatsiya: ', 'ja': '解毒する： ',
         'default': 'Detoxify: '
     }
 
@@ -189,9 +158,9 @@ def generate_labels(df):
     langs = df_process['lang'].fillna('default').tolist()
     
     generated_results = []
-    print("Starting Generation Loop...")
+    print(f"  Starting generation for {len(toxic_texts)} texts...")
     
-    for i in tqdm(range(0, len(toxic_texts), BATCH_SIZE)):
+    for i in tqdm(range(0, len(toxic_texts), BATCH_SIZE), desc=f"  {lang}"):
         batch_texts = toxic_texts[i : i + BATCH_SIZE]
         batch_langs = langs[i : i + BATCH_SIZE]
         
@@ -211,7 +180,7 @@ def generate_labels(df):
             decoded = tokenizer.batch_decode(outputs, skip_special_tokens=True)
             generated_results.extend(decoded)
         except Exception as e:
-            print(f"\n⚠ Batch failed: {e}. Filling with empty strings.")
+            print(f"\n  ⚠ Batch failed: {e}. Filling with empty strings.")
             generated_results.extend([""] * len(batch_texts))
         
         # Memory Management
@@ -220,24 +189,139 @@ def generate_labels(df):
 
     # Update DataFrame
     df.loc[mask, 'non_toxic_sentence'] = generated_results
-    print(f"\n✓ Generated {len(generated_results)} detoxified versions")
+    print(f"  ✓ Generated {len(generated_results)} detoxified versions")
     return df
 
 # ==========================================
 # EXECUTION
 # ==========================================
 if __name__ == "__main__":
-    full_df = prepare_datasets()
+    print("\n" + "="*60)
+    print("MULTILINGUAL DETOXIFICATION DATASET GENERATION")
+    print("="*60)
+    print(f"Processing {len(ALL_LANGUAGES)} languages: {', '.join(ALL_LANGUAGES)}")
+    print(f"Output directory: {OUTPUT_DIR}")
     
-    if full_df is not None:
-        final_df = generate_labels(full_df)
-        
-        final_df.to_csv(OUTPUT_FILE, index=False)
-        print(f"\n✅ SUCCESS! Dataset saved to {OUTPUT_FILE}")
-        print(f"\nDataset Statistics:")
-        print(f"  Total rows: {len(final_df)}")
-        print(f"  Languages: {final_df['lang'].value_counts().to_dict()}")
-        print(f"\nSample rows:")
-        print(final_df.head(3))
+    # Load model once (shared across all languages)
+    print("\n" + "="*60)
+    print("LOADING MODEL (One-time setup)")
+    print("="*60)
+    
+    # Check hardware availability
+    has_cuda = torch.cuda.is_available()
+    print(f"CUDA available: {has_cuda}")
+    if has_cuda:
+        print(f"GPU: {torch.cuda.get_device_name(0)}")
     else:
-        print("❌ Failed to initialize dataframe.")
+        print("⚠ Running on CPU - this will be SLOW. Consider using Google Colab with GPU.")
+    
+    tokenizer = None
+    model = None
+    device = "cuda" if has_cuda else "cpu"
+    
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+        
+        if has_cuda:
+            # Try to use quantization on GPU
+            try:
+                from transformers import BitsAndBytesConfig
+                
+                quantization_config = BitsAndBytesConfig(
+                    load_in_8bit=True,
+                    llm_int8_threshold=6.0
+                )
+                
+                model = AutoModelForSeq2SeqLM.from_pretrained(
+                    MODEL_NAME,
+                    device_map="auto",
+                    quantization_config=quantization_config
+                )
+                print("✓ Model loaded successfully with 8-bit quantization\n")
+                
+            except Exception as quant_error:
+                print(f"⚠ Quantization failed: {quant_error}")
+                print("  Trying FP16 instead...")
+                model = AutoModelForSeq2SeqLM.from_pretrained(
+                    MODEL_NAME,
+                    device_map="auto",
+                    torch_dtype=torch.float16
+                )
+                print("✓ Model loaded successfully in FP16\n")
+        else:
+            # CPU mode - load in full precision (slower but works)
+            print("Loading model for CPU (this may take a while)...")
+            model = AutoModelForSeq2SeqLM.from_pretrained(
+                MODEL_NAME,
+                torch_dtype=torch.float32
+            )
+            model = model.to(device)
+            print("✓ Model loaded successfully on CPU\n")
+            print("⚠ WARNING: CPU inference will be very slow for large datasets!")
+            print("  Consider processing fewer languages or using GPU acceleration.\n")
+            
+    except Exception as e:
+        print(f"❌ Model load failed. Error: {e}")
+        print("\nTroubleshooting:")
+        if has_cuda:
+            print("1. Update bitsandbytes: pip install -U bitsandbytes>=0.43.1")
+            print("2. Install accelerate: pip install -U accelerate")
+            print("3. Check GPU memory: nvidia-smi")
+        else:
+            print("1. The model is large and requires significant resources")
+            print("2. Consider using Google Colab with free GPU: https://colab.research.google.com")
+            print("3. Or use a smaller model for CPU inference")
+        import sys
+        sys.exit(1)
+    
+    # Verify model loaded
+    if model is None or tokenizer is None:
+        print("❌ Critical error: Model or tokenizer is None")
+        import sys
+        sys.exit(1)
+    
+    # Process each language
+    success_count = 0
+    failed_langs = []
+    
+    for lang in ALL_LANGUAGES:
+        try:
+            # Prepare dataset
+            lang_df = prepare_dataset_for_language(lang)
+            
+            if lang_df is None or len(lang_df) == 0:
+                print(f"  ⚠ Skipping {lang}: No data available")
+                failed_langs.append(lang)
+                continue
+            
+            # Generate labels
+            final_df = generate_labels(lang_df, lang, tokenizer, model)
+            
+            # Save to file
+            output_file = os.path.join(OUTPUT_DIR, f"detox_dataset_{lang}.csv")
+            final_df.to_csv(output_file, index=False)
+            
+            print(f"\n  ✅ Saved: {output_file}")
+            print(f"     Total rows: {len(final_df)}")
+            print(f"     Complete entries: {(~final_df['non_toxic_sentence'].isna()).sum()}")
+            
+            success_count += 1
+            
+            # Clear memory
+            del lang_df, final_df
+            gc.collect()
+            torch.cuda.empty_cache()
+            
+        except Exception as e:
+            print(f"\n  ❌ Failed to process {lang}: {e}")
+            failed_langs.append(lang)
+    
+    # Final Summary
+    print("\n" + "="*60)
+    print("PROCESSING COMPLETE")
+    print("="*60)
+    print(f"✅ Successfully processed: {success_count}/{len(ALL_LANGUAGES)} languages")
+    if failed_langs:
+        print(f"❌ Failed languages: {', '.join(failed_langs)}")
+    print(f"\nAll files saved in: {OUTPUT_DIR}/")
+    print("Files: detox_dataset_<lang>.csv")
