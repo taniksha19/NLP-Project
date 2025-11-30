@@ -1,0 +1,19 @@
+# Python env & cache
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Large experiment stuff
+artifacts/
+checkpoints/
+results/
+logs/
+*.log
+
+# Model / data files (tweak as needed)
+*.pt
+*.bin
+*.ckpt
+data/
+
