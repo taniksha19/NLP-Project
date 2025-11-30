@@ -145,6 +145,47 @@ The baseline uses a simple stopword removal approach:
 - Misspelled toxic words will not be removed
 - This is a trivial baseline intended for comparison purposes
 
+## Build LOR tables for all languages 
+
+python -m src.mask_reg.build_lor \
+  --languages en,ru,uk,es,am,zh,ar,hi,de \
+  --tokenizer google/mt5-small \
+  --mask_fraction 0.05 \
+  --out_dir artifacts/lor_mf005
+
+  This will create *.jsonl + *.meta.json for each language under artifacts/lor_mf005/.
+
+## Train the LoRA-finetuned detox model (per language)
+
+python -m src.mask_reg.train_mt5 \
+  --lang en \
+  --dataset textdetox/multilingual_paradetox \
+  --lor_dir artifacts/lor_mf005 \
+  --model_name google/mt5-small \
+  --out_dir checkpoints/mask-reg-mt5-small-en-lora-mf005 \
+  --epochs 5 \
+  --train_bs 1 \
+  --eval_bs 1 \
+  --grad_accum 8 \
+  --max_source_len 96 \
+  --max_target_len 96 \
+  --merge_lora
+
+This trains a LoRA adapter and then writes a merged HF model to:
+checkpoints/mask-reg-mt5-small-en-lora-mf005-MERGED/
+To train another language, just change --lang (and optionally --out_dir naming).
+
+## Run Inference (Mask)
+
+python -m src.mask_reg.infer_mt5 \
+  --lang en \
+  --lor_dir artifacts/lor_mf005 \
+  --model_dir checkpoints/mask-reg-mt5-small-en-lora-mf005-MERGED \
+  --tokenizer_name google/mt5-small \
+  --threshold_mult 0.9
+
+
+
 ## TODO
 
 - Improve tokenization to handle punctuation better
