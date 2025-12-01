@@ -152,10 +152,10 @@ def load_all_datasets(data_dir, languages):
                 df['lang'] = lang
             
             all_data.append(df)
-            print(f"✅ {lang}: {len(df)} samples")
+            print(f" {lang}: {len(df)} samples")
             
         except Exception as e:
-            print(f"❌ Error loading {lang}: {e}")
+            print(f" Error loading {lang}: {e}")
             continue
     
     if not all_data:
@@ -167,14 +167,14 @@ def load_all_datasets(data_dir, languages):
     # Shuffle
     combined_df = combined_df.sample(frac=1, random_state=42).reset_index(drop=True)
     
-    print(f"\n✅ Total samples: {len(combined_df)}")
+    print(f"\n Total samples: {len(combined_df)}")
     
     # Split into train/val (90/10)
     split_idx = int(len(combined_df) * 0.9)
     train_df = combined_df[:split_idx]
     val_df = combined_df[split_idx:]
     
-    print(f"📊 Train: {len(train_df)}, Val: {len(val_df)}")
+    print(f"Train: {len(train_df)}, Val: {len(val_df)}")
     
     return train_df, val_df
 
@@ -190,7 +190,7 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}")
     if device == "cpu":
-        print("⚠️  WARNING: Training on CPU will be very slow!")
+        print(" WARNING: Training on CPU will be very slow!")
     
     # Create output directory
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -220,18 +220,18 @@ def main():
                 device_map="auto",
                 quantization_config=quantization_config
             )
-            print("✅ Model loaded with 8-bit quantization")
+            print(" Model loaded with 8-bit quantization")
         except:
             model = AutoModelForSeq2SeqLM.from_pretrained(
                 BASE_MODEL,
                 device_map="auto",
                 torch_dtype=torch.float16
             )
-            print("✅ Model loaded in FP16")
+            print(" Model loaded in FP16")
     else:
         model = AutoModelForSeq2SeqLM.from_pretrained(BASE_MODEL)
         model = model.to(device)
-        print("✅ Model loaded on CPU")
+        print(" Model loaded on CPU")
     
     # Load datasets
     train_df, val_df = load_all_datasets(DATA_DIR, LANGUAGES)
