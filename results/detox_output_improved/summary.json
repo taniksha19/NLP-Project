@@ -1,0 +1,38 @@
+{
+  "en": {
+    "toxicity_orig": 0.9894203234324,
+    "toxicity": 0.37846458229971225,
+    "toxicity_reduction": 0.6109557411326878,
+    "similarity": 0.9484175597595064,
+    "fluency": -5.272687784093895,
+    "total_samples": 302,
+    "samples_masked": 265
+  },
+  "ru": {
+    "toxicity_orig": 0.8550326908473874,
+    "toxicity": 0.8550326908473874,
+    "toxicity_reduction": 0.0,
+    "similarity": 0.9451825647898342,
+    "fluency": -2.84986872387969,
+    "total_samples": 368,
+    "samples_masked": 0
+  },
+  "es": {
+    "toxicity_orig": 0.9674169940333813,
+    "toxicity": 0.7708047596833203,
+    "toxicity_reduction": 0.19661223435006103,
+    "similarity": 0.9360654448270798,
+    "fluency": -5.4304705033302305,
+    "total_samples": 500,
+    "samples_masked": 305
+  },
+  "am": {
+    "toxicity_orig": 0.9982398691291581,
+    "toxicity": 0.9982398691291581,
+    "toxicity_reduction": 0.0,
+    "similarity": 0.9825382991703209,
+    "fluency": -2.7982768279587673,
+    "total_samples": 501,
+    "samples_masked": 0
+  }
+}

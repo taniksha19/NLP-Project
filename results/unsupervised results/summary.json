@@ -1,0 +1,83 @@
+{
+  "am": {
+    "toxicity_orig": 0.0004380442842375487,
+    "toxicity": 0.00044293253449723125,
+    "toxicity_reduction": -4.888250259682536e-06,
+    "similarity": 0.9478495287895202,
+    "fluency": -2.325168812572956,
+    "total_samples": 400,
+    "samples_masked": 94
+  },
+  "ru": {
+    "toxicity_orig": 0.6345295310020447,
+    "toxicity": 0.4757618308067322,
+    "toxicity_reduction": 0.1587677001953125,
+    "similarity": 0.8532984001934528,
+    "fluency": -2.4246105936169626,
+    "total_samples": 400,
+    "samples_masked": 150
+  },
+  "es": {
+    "toxicity_orig": 0.5581757426261902,
+    "toxicity": 0.32659366726875305,
+    "toxicity_reduction": 0.23158207535743713,
+    "similarity": 0.853380616158247,
+    "fluency": -5.9211441236734395,
+    "total_samples": 400,
+    "samples_masked": 146
+  },
+  "en": {
+    "toxicity_orig": 0.9305485486984253,
+    "toxicity": 0.3637344241142273,
+    "toxicity_reduction": 0.566814124584198,
+    "similarity": 0.9356401854753494,
+    "fluency": -5.281109013557434,
+    "total_samples": 400,
+    "samples_masked": 315
+  },
+  "uk": {
+    "toxicity_orig": 0.1257190704345703,
+    "toxicity": 0.04251746088266373,
+    "toxicity_reduction": 0.08320160955190659,
+    "similarity": 0.9714391879737377,
+    "fluency": -2.8153498977422715,
+    "total_samples": 400,
+    "samples_masked": 255
+  },
+  "de": {
+    "toxicity_orig": 0.04289689660072327,
+    "toxicity": 0.033504877239465714,
+    "toxicity_reduction": 0.009392019361257553,
+    "similarity": 0.9224129125475884,
+    "fluency": -5.344512170553207,
+    "total_samples": 400,
+    "samples_masked": 78
+  },
+  "ar": {
+    "toxicity_orig": 0.0005329693667590618,
+    "toxicity": 0.0005338636110536754,
+    "toxicity_reduction": -8.942442946135998e-07,
+    "similarity": 0.9718312369287014,
+    "fluency": -2.6809209221601487,
+    "total_samples": 400,
+    "samples_masked": 84
+  },
+  "zh": {
+    "toxicity_orig": 0.0004744881298393011,
+    "toxicity": 0.0004744881298393011,
+    "toxicity_reduction": 0.0,
+    "similarity": 0.8620435929298401,
+    "fluency": -3.716548638641834,
+    "total_samples": 400,
+    "samples_masked": 0
+  },
+  "hi": {
+    "toxicity_orig": 0.0005575682152993977,
+    "toxicity": 0.0005574345705099404,
+    "toxicity_reduction": 1.3364478945732117e-07,
+    "similarity": 0.9619008362293243,
+    "fluency": -1.9390501675009728,
+    "total_samples": 400,
+    "samples_masked": 11
+  }
+}

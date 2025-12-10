@@ -1,0 +1,5 @@
+venv/
+model_cache/
+mt0-detox-lora/
+mt0-detox-lora_am/
+mt0-detox-lora_ru/
