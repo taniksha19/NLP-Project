@@ -16,7 +16,7 @@ SPACES = re.compile(r"\s+")
 def detoxify(
     text: str,
     stopwords: List[str],
-    remove_all_terms: bool = True,
+    remove_all_terms: bool = False,
     remove_no_terms: bool = False,
 ) -> str:
 

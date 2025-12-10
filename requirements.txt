@@ -7,8 +7,8 @@ numpy
 tqdm
 sentence-transformers
 scikit-learn
-
-
-
+detoxify
+evaluate
+bert_score
 
 

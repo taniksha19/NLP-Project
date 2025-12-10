@@ -1,2 +1,0 @@
-model,language,samples,toxicity_original,toxicity_predicted,toxicity_reduction,similarity,fluency
-MT0-LoRA,ru,368,0.0006735759088769555,0.0013148075668141246,-0.0006412316579371691,0.8335037756225337,-4.272432853346285
